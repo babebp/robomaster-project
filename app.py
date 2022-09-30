@@ -11,8 +11,10 @@ class MyRobot:
         self.ep_servo = self.ep_robot.servo
         self.ep_chassis = self.ep_robot.chassis
         self.ep_sensor_adaptor = self.ep_robot.sensor_adaptor
+        self.ep_gripper = self.ep_robot.gripper
         self.delay = time.sleep(0.25)
-
+        self.x_val = 0.1
+        self.y_val = 0.1
         self.distance = 1000
 
     def read_sensor(self):
@@ -28,7 +30,6 @@ class MyRobot:
     def sub_data_handler(self, sub_info):
         self.distance = sub_info[0]
 
-
     def start_ir(self):
         self.ep_ir.sub_distance(freq=5, callback=self.sub_data_handler)
 
@@ -39,18 +40,41 @@ class MyRobot:
         self.ep_servo.moveto(index=1, angle= 0).wait_for_completed()
         self.ep_servo.moveto(index=2, angle= 0).wait_for_completed()
 
-    def turn_left(self, until):
-        while not until:
-            # Turn Left
-            pass
+    def go_forward(self):
+        self.ep_chassis.move(x = self.x_val, y = 0, z=0, xy_speed=0.1).wait_for_completed()
 
-    def turn_right(self, until):
-        while not until:
-            # Turn Right
-            pass
+    def turn_right_til_both_front_gone(self):
+        while not (fl == 1 and fr == 1) or (br == 0 or bl == 0):
+            self.ep_chassis.move(x=0, y=self.y_val, z=0, xy_speed=0.1).wait_for_completed()
+            self.read_sensor()
+            print('1')
+
+    def turn_left_til_back_right_gone(self):
+        while not (br == 0 or (fl == 1 and fr == 1)):
+            self.ep_chassis.move(x=0, y=self.y_val, z=0, xy_speed=0.1).wait_for_completed()
+            self.read_sensor()
+            print('2')
+
+    def turn_right_til_back_left_gone(self):
+        while not (bl == 0 or (fl == 1 and fr == 1)):
+            self.ep_chassis.move(x=0, y=self.y_val, z=0, xy_speed=0.1).wait_for_completed()
+            self.read_sensor()
+            print('3')
+
+    def turn_left_til_front_right_gone(self):
+        while not ((fr == 1 and fl == 1) or (br == 0 or bl == 0)):
+            self.ep_chassis.move(x=0, y=-self.y_val, z=0, xy_speed=0.1).wait_for_completed()
+            self.read_sensor()
+            print('4')
+
+    def turn_right_til_front_left_gone(self):
+        while not ((fr == 1 and fl == 1) or (br == 0 or bl == 0)):
+            self.ep_chassis.move(x=0, y=self.y_val, z=0, xy_speed=0.1).wait_for_completed()
+            self.read_sensor()
+            print('5')
 
     def pickup(self):
-        # Pick the Flag
+
         self.stop_ir() # Stop IR Distance Sensor
         exit() # Exit Program
 
@@ -65,16 +89,17 @@ if __name__ == '__main__':
     robott = MyRobot()
     robott.reset_gripper() # Reset Gripper 
     robott.start_ir() # Start IR Distance Sensor
-
     robott.read_sensor() # Read IR Sensor Value (0 or 1)
 
     while True:
         robott.read_sensor()
-        # if (br == 1 and bl == 1) and (fl == 0 and fr == 0): robott.turn_right(( (fl == 1 and fr == 1) or (br == 0 or bl == 0) ))
-        # if (br == 0) and (fl == 0 or fr == 0): robott.turn_left((br == 1 and (fl == 1 and fr == 1)))
-        # if (bl == 0) and (fl == 0 or fr == 0): robott.turn_right((bl == 1 and (fl == 1 and fr == 1)))
-        # if (bl == 1 and br == 1) and (fl == 0 and fr == 1): robott.turn_right(fl == 1)
-        # if (bl == 1 and br == 1) and (fl == 1 and fr == 0): robott.turn_left(fr == 1)
-        # if robott.distance <= 6.2: robott.pickup()  
+        if (br == 1 and bl == 1) and (fl == 0 and fr == 0): robott.turn_right_til_both_front_gone()
+        if (br == 0) and (fl == 0 or fr == 0): robott.turn_left_til_back_right_gone()
+        if (bl == 0) and (fl == 0 or fr == 0): robott.turn_right_til_back_left_gone()
+        if (bl == 1 and br == 1) and (fl == 0 and fr == 1): robott.turn_right_til_front_left_gone()
+        if (bl == 1 and br == 1) and (fl == 1 and fr == 0): robott.turn_left_til_front_right_gone()
+        robott.go_forward()
+        pass
+        if robott.distance <= 6.2: robott.pickup()  
 
         print(f'br: {br}, bl: {bl}, fl: {fl}, fr: {fr}, distance: {robott.distance}')
