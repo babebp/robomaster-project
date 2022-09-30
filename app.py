@@ -12,7 +12,7 @@ class MyRobot:
         self.ep_chassis = self.ep_robot.chassis
         self.ep_sensor_adaptor = self.ep_robot.sensor_adaptor
         self.ep_gripper = self.ep_robot.gripper
-        self.delay = 1
+        self.delay = 0.25
         self.x_val = 0.1
         self.y_val = 0.1
         self.distance = 1000
