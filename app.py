@@ -168,11 +168,11 @@ class MyRobot:
         right_side = np.sum(the_result[0:720, 850:1280] == 255)
 
         # if left white pixel is the most then turn left until mid part is most
-        if left_side < middle and left_side < right_side: pass
+        if left_side < middle and left_side < right_side: self.spin('left')
         # if right white pixel is them ost then turn right until mid part in most
-        if right_side < middle and right_side < left_side: pass
+        if right_side < middle and right_side < left_side: self.spin('right')
         # if middle is the most white pixel
-        else: pass
+        else: self.pick_up()
 
     def spin(self, direction):
         if direction.lower() == 'right': 
