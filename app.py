@@ -1,4 +1,3 @@
-from turtle import right
 from robomaster import robot
 import time
 import cv2
