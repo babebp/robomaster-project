@@ -1,3 +1,4 @@
+from turtle import right
 from robomaster import robot
 import time
 import cv2
@@ -162,9 +163,47 @@ class MyRobot:
 
     def find_target_second_edition(self, the_result): 
         # Split Three parts left mid right
+        left_side = np.sum(the_result[0:720, 0:425] == 255)
+        middle = np.sum(the_result[0:720, 425:850] == 255)
+        right_side = np.sum(the_result[0:720, 850:1280] == 255)
+
         # if left white pixel is the most then turn left until mid part is most
+        if left_side < middle and left_side < right_side: pass
         # if right white pixel is them ost then turn right until mid part in most
-        pass
+        if right_side < middle and right_side < left_side: pass
+        # if middle is the most white pixel
+        else: pass
+
+    def spin(self, direction):
+        if direction.lower() == 'right': 
+            while True:
+                img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+                the_result = self.detect_red(img)
+
+                left_side = np.sum(the_result[0:720, 0:425] == 255)
+                middle = np.sum(the_result[0:720, 425:850] == 255)
+                right_side = np.sum(the_result[0:720, 850:1280] == 255)
+
+                if middle < left_side and middle < right_side:
+                    self.stop_moving()
+                    break
+
+                self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
+
+        if direction.lower() == 'left':
+            while True:
+                img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+                the_result = self.detect_red(img)
+
+                left_side = np.sum(the_result[0:720, 0:425] == 255)
+                middle = np.sum(the_result[0:720, 425:850] == 255)
+                right_side = np.sum(the_result[0:720, 850:1280] == 255)
+
+                if middle < left_side and middle < right_side:
+                    self.stop_moving()
+                    break
+
+                self.ep_chassis.drive_wheels(w1=-self.speed, w2=self.speed, w3=self.speed, w4=-self.speed)
 
     def pick_up(self):
         # Have to try how to grab that thing
@@ -219,9 +258,7 @@ if __name__ == '__main__':
             if bl == 0 or fl == 0: robott.turn_right()
             else: robott.go_forward()
             pass
-        
+
         except KeyboardInterrupt:
             print('Stop Program')
             robott.stop_moving()
-
-
