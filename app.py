@@ -261,3 +261,6 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print('Stop Program')
             robott.stop_moving()
+            robott.stop_ir()
+            robott.close_camera()
+            print('Shutdown Already')
