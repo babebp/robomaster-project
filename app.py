@@ -14,7 +14,7 @@ class MyRobot:
         self.ep_gripper = self.ep_robot.gripper
         self.ep_chassis = self.ep_robot.chassis
         self.ep_sensor_adaptor = self.ep_robot.sensor_adaptor
-        self.speed = 30
+        self.speed = 15
         self.x_val = 0.1
         self.y_val = 0.1
         self.delay = 0.25
@@ -172,7 +172,7 @@ class MyRobot:
             time.sleep(self.delay)
             self.read_sensor()
             time.sleep(self.delay)
-            print('5')
+            print('Turning Left')
 
     def turn_right(self):
         self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
@@ -185,10 +185,10 @@ class MyRobot:
             time.sleep(self.delay)
             self.read_sensor()
             time.sleep(self.delay)
-            print('4')
+            print('Turning Right')
     
     def go_forward(self):
-        self.ep_chassis.drive_wheels(w1= 30, w2=30, w3=30, w4=30)
+        self.ep_chassis.drive_wheels(w1= self.speed, w2= self.speed , w3= self.speed , w4= self.speed)
         time.sleep(self.delay)
 
 if __name__ == '__main__':
