@@ -146,7 +146,7 @@ class MyRobot:
 
             # If white pixel more than 19000 will break while loop
             if sum_white >= 19000: 
-                self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
+                self.stop_moving()
                 break
             else:
                 self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
@@ -209,10 +209,10 @@ class MyRobot:
         pass
 
     def turn_left(self):
-        self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
+        self.stop_moving()
         while True : # ทำไปเรื่อยๆ ขณะที่หน้าเป็น 0 
             if bl == 0 or (fl == fr == 1):
-                self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
+                self.stop_moving()
                 break
 
             self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=self.speed, w4=-self.speed)
@@ -222,10 +222,10 @@ class MyRobot:
             print('Turning Left')
 
     def turn_right(self):
-        self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
+        self.stop_moving()
         while True:
             if br == 0 or (fl == fr == 1):
-                self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
+                self.stop_moving()
                 break
 
             self.ep_chassis.drive_wheels(w1=-self.speed, w2=self.speed, w3=-self.speed, w4=self.speed)
