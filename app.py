@@ -200,6 +200,9 @@ class MyRobot:
         self.ep_chassis.drive_wheels(w1= self.speed, w2= self.speed , w3= self.speed , w4= self.speed)
         time.sleep(self.delay)
 
+    def stop_moving(self):
+        self.ep_chassis.drive_wheels(w1 = 0, w2 = 0 ,w3 = 0, w4 = 0)
+
 if __name__ == '__main__':
     robott = MyRobot()
     robott.reset_gripper() # Reset Gripper 
@@ -208,10 +211,17 @@ if __name__ == '__main__':
     robott.open_camera()
 
     while True:
-        robott.read_sensor()
-        robott.display_camera()
+        try:
+            robott.read_sensor()
+            robott.display_camera()
+            
+            if br == 0 or fr == 0: robott.turn_left()
+            if bl == 0 or fl == 0: robott.turn_right()
+            else: robott.go_forward()
+            pass
         
-        if br == 0 or fr == 0: robott.turn_left()
-        if bl == 0 or fl == 0: robott.turn_right()
-        else: robott.go_forward()
-        pass
+        except KeyboardInterrupt:
+            print('Stop Program')
+            robott.stop_moving()
+
+
