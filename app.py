@@ -5,6 +5,12 @@ import numpy as np
 
 class MyRobot:
     def __init__(self):
+        self.speed = 15
+        self.x_val = 0.1
+        self.y_val = 0.1
+        self.delay = 0.25
+        self.distance = 1000
+
         self.ep_robot = robot.Robot()
         self.ep_robot.initialize(conn_type="ap")
         self.ep_ir = self.ep_robot.sensor
@@ -14,11 +20,6 @@ class MyRobot:
         self.ep_gripper = self.ep_robot.gripper
         self.ep_chassis = self.ep_robot.chassis
         self.ep_sensor_adaptor = self.ep_robot.sensor_adaptor
-        self.speed = 15
-        self.x_val = 0.1
-        self.y_val = 0.1
-        self.delay = 0.25
-        self.distance = 1000
 
     def read_sensor(self):
         # Read 4 Ir sensors ( 1 or 0 )
@@ -30,6 +31,7 @@ class MyRobot:
         fr = self.ep_sensor_adaptor.get_io(id=1, port=2)
         bl = self.ep_sensor_adaptor.get_io(id=2, port=1)
         br = self.ep_sensor_adaptor.get_io(id=2, port=2)
+        time.sleep(0.01) # Delete Later Just Try
         print(f'br: {br}, bl: {bl}, fl: {fl}, fr: {fr}, distance: {robott.distance}')
         
     def sub_data_handler(self, sub_info):
@@ -48,32 +50,6 @@ class MyRobot:
         # Move gripper to 0 degree
         self.ep_servo.moveto(index=1, angle= 0).wait_for_completed()
         self.ep_servo.moveto(index=2, angle= 0).wait_for_completed()
-
-    def find_target(self, the_result):
-        while True:
-            # Get the image real-time
-            img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
-            the_result = self.detect_red(img)
-
-            # Count white pixel in the middle of the picture
-            sum_white = np.sum(the_result[490:700,210:510] == 255) 
-            print(f'sum : {sum_white}')
-
-            # If white pixel more than 19000 will break while loop
-            if sum_white >= 19000: 
-                self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
-                break
-            else:
-                self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
-                time.sleep(self.delay)
-
-        # Save image to see the result
-        cv2.imwrite('result_raw', img)
-        cv2.imwrite('result_finished', the_result)
-        
-        self.close_camera() # Close Camera
-        self.stop_ir() # Stop IR Distance Sensor
-        exit() # Exit Program
 
     def open_camera(self):
         # Start Camera
@@ -132,7 +108,6 @@ class MyRobot:
 
     def image_procession(self, image):
         cv2.imshow('original', image)
-        result = image.copy()
         image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         lower1 = np.array([0, 100, 20])
@@ -147,8 +122,6 @@ class MyRobot:
 
         mask = lower_mask + upper_mask
 
-        result = cv2.bitwise_and(result, result, mask=mask)
-
         # cv2.rectangle(mask, (490,210), (790,510), (255, 255, 255)) 
 
         the_result = self.blur_pic(mask)
@@ -160,6 +133,42 @@ class MyRobot:
         cv2.imshow('result', the_result)
 
         return the_result
+
+    def find_target(self, the_result):
+        while True:
+            # Get the image real-time
+            img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+            the_result = self.detect_red(img)
+
+            # Count white pixel in the middle of the picture
+            sum_white = np.sum(the_result[210:510, 490:790] == 255) 
+            print(f'sum : {sum_white}')
+
+            # If white pixel more than 19000 will break while loop
+            if sum_white >= 19000: 
+                self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
+                break
+            else:
+                self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
+                time.sleep(self.delay)
+
+        # Save image to see the result
+        cv2.imwrite('result_raw', img)
+        cv2.imwrite('result_finished', the_result)
+        
+        self.close_camera() # Close Camera
+        self.stop_ir() # Stop IR Distance Sensor
+        exit() # Exit Program
+
+    def find_target_second_edition(self, the_result): 
+        # Split Three parts left mid right
+        # if left white pixel is the most then turn left until mid part is most
+        # if right white pixel is them ost then turn right until mid part in most
+        pass
+
+    def pick_up(self):
+        # Have to try how to grab that thing
+        pass
 
     def turn_left(self):
         self.ep_chassis.drive_wheels(w1=0, w2=0, w3=0, w4=0)
@@ -206,4 +215,3 @@ if __name__ == '__main__':
         if bl == 0 or fl == 0: robott.turn_right()
         else: robott.go_forward()
         pass
-        if robott.distance <= 6.2: robott.find_target()
