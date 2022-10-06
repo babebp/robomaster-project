@@ -1,3 +1,5 @@
+from re import L
+from turtle import distance
 from robomaster import robot
 import time
 import cv2
@@ -20,6 +22,18 @@ class MyRobot:
         self.ep_gripper = self.ep_robot.gripper
         self.ep_chassis = self.ep_robot.chassis
         self.ep_sensor_adaptor = self.ep_robot.sensor_adaptor
+    
+    def move_gripper(self, servo, degree):
+        self.ep_servo.moveto(index=servo, angle= degree).wait_for_completed()
+        time.sleep(2)
+
+    def open_gripper(self):
+        self.ep_gripper.open(power=50)
+        time.sleep(2)
+
+    def close_gripper(self):
+        self.ep_gripper.close()
+        time.sleep(2)
 
     def read_sensor(self):
         # Read 4 Ir sensors ( 1 or 0 )
@@ -50,6 +64,7 @@ class MyRobot:
         # Move gripper to 0 degree
         self.ep_servo.moveto(index=1, angle= 0).wait_for_completed()
         self.ep_servo.moveto(index=2, angle= 0).wait_for_completed()
+        self.ep_gripper.open(power = 50)
 
     def open_camera(self):
         # Start Camera
@@ -79,7 +94,7 @@ class MyRobot:
 
     def check_white(self, white_pixel, the_result):
         # Check if white pixel more than 19000 will go to find_target
-        if white_pixel >= 19000:
+        if white_pixel >= 17000:
             self.find_target(the_result)
 
     def detect_red(self, image):
@@ -135,6 +150,7 @@ class MyRobot:
         return the_result
 
     def find_target(self, the_result):
+        self.stop_moving()
         while True:
             # Get the image real-time
             img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
@@ -145,67 +161,85 @@ class MyRobot:
             print(f'sum : {sum_white}')
 
             # If white pixel more than 19000 will break while loop
-            if sum_white >= 19000: 
+            if sum_white >= 7000: 
+                print('Finish Spin')
                 self.stop_moving()
+                print('Find Target')
+                self.move_to_target()
+                print('Pickup')
+                self.pickup()
+                exit()
                 break
+                
             else:
                 self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
                 time.sleep(self.delay)
 
-        # Save image to see the result
-        cv2.imwrite('result_raw', img)
-        cv2.imwrite('result_finished', the_result)
         
-        self.close_camera() # Close Camera
-        self.stop_ir() # Stop IR Distance Sensor
-        exit() # Exit Program
+        # self.close_camera() # Close Camera
+        # self.stop_ir() # Stop IR Distance Sensor
+        # exit() # Exit Program
 
-    def find_target_second_edition(self, the_result): 
-        # Split Three parts left mid right
-        left_side = np.sum(the_result[0:720, 0:425] == 255)
-        middle = np.sum(the_result[0:720, 425:850] == 255)
-        right_side = np.sum(the_result[0:720, 850:1280] == 255)
+    # def find_target_second_edition(self, the_result): 
+    #     self.stop_moving()
+    #     # Split Three parts left mid right
+    #     left_side = np.sum(the_result[0:720, 0:425] == 255)
+    #     middle = np.sum(the_result[0:720, 425:850] == 255)
+    #     right_side = np.sum(the_result[0:720, 850:1280] == 255)
 
-        # if left white pixel is the most then turn left until mid part is most
-        if left_side < middle and left_side < right_side: self.spin('left')
-        # if right white pixel is them ost then turn right until mid part in most
-        if right_side < middle and right_side < left_side: self.spin('right')
-        # if middle is the most white pixel
-        else: self.pick_up()
+    #     # if left white pixel is the most then turn left until mid part is most
+    #     if left_side < middle and left_side < right_side: self.spin('left')
+    #     # if right white pixel is them ost then turn right until mid part in most
+    #     if right_side < middle and right_side < left_side: self.spin('right')
+    #     # if middle is the most white pixel
+    #     else: self.move_to_target()
 
-    def spin(self, direction):
-        if direction.lower() == 'right': 
-            while True:
-                img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
-                the_result = self.detect_red(img)
+    # def spin(self, direction):
+    #     if direction.lower() == 'right': 
+    #         while True:
+    #             img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+    #             the_result = self.detect_red(img)
 
-                left_side = np.sum(the_result[0:720, 0:425] == 255)
-                middle = np.sum(the_result[0:720, 425:850] == 255)
-                right_side = np.sum(the_result[0:720, 850:1280] == 255)
+    #             left_side = np.sum(the_result[0:720, 0:425] == 255)
+    #             middle = np.sum(the_result[0:720, 425:850] == 255)
+    #             right_side = np.sum(the_result[0:720, 850:1280] == 255)
 
-                if middle < left_side and middle < right_side:
-                    self.stop_moving()
-                    break
+    #             if middle < left_side and middle < right_side:
+    #                 self.stop_moving()
+    #                 break
 
-                self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
+    #             self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
+    #             time.sleep(self.delay)
 
-        if direction.lower() == 'left':
-            while True:
-                img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
-                the_result = self.detect_red(img)
+    #     if direction.lower() == 'left':
+    #         while True:
+    #             img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+    #             the_result = self.detect_red(img)
 
-                left_side = np.sum(the_result[0:720, 0:425] == 255)
-                middle = np.sum(the_result[0:720, 425:850] == 255)
-                right_side = np.sum(the_result[0:720, 850:1280] == 255)
+    #             left_side = np.sum(the_result[0:720, 0:425] == 255)
+    #             middle = np.sum(the_result[0:720, 425:850] == 255)
+    #             right_side = np.sum(the_result[0:720, 850:1280] == 255)
 
-                if middle < left_side and middle < right_side:
-                    self.stop_moving()
-                    break
+    #             if middle < left_side and middle < right_side:
+    #                 self.stop_moving()
+    #                 break
 
-                self.ep_chassis.drive_wheels(w1=-self.speed, w2=self.speed, w3=self.speed, w4=-self.speed)
+    #             self.ep_chassis.drive_wheels(w1=-self.speed, w2=self.speed, w3=self.speed, w4=-self.speed)
+    #             time.sleep(self.delay)
 
-    def pick_up(self):
+    def pickup(self):
+        self.move_gripper(2, -90)
+        self.close_gripper()
+        pass
+
+    def move_to_target(self):
         # Have to try how to grab that thing
+        while True:
+            if robott.distance <= 147:
+                self.stop_moving()
+                break
+            else:
+                self.go_forward()
         pass
 
     def turn_left(self):
@@ -265,4 +299,6 @@ if __name__ == '__main__':
             robott.close_camera()
             print('Shutdown Already')
 
-##Don
+
+# if spin not work try delay and move a little
+# find pickup algorithms
