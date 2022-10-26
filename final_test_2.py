@@ -1,3 +1,4 @@
+from multiprocessing.connection import wait
 from re import L
 from turtle import distance
 from robomaster import robot
@@ -14,7 +15,7 @@ class MyRobot:
         self.distance = 1000
 
         self.ep_robot = robot.Robot()
-        self.ep_robot.initialize(conn_type="ap")
+        self.ep_robot.initialize(conn_type="rndis")
         self.ep_ir = self.ep_robot.sensor
         self.ep_servo = self.ep_robot.servo
         self.ep_camera = self.ep_robot.camera
@@ -155,37 +156,52 @@ class MyRobot:
         image = image[200:image.shape[0], 0:image.shape[1]]
         mask = mask[180:image.shape[0], 0:image.shape[1]]
         the_result, contour1 = self.draw_rectangular(the_result, image, (0, 255, 0))
-        the_result2, contour2 = self.draw_rectangular(the_result2, the_result, (255, 255, 255))
+        # the_result2, contour2 = self.draw_rectangular(the_result2, the_result, (255, 255, 255))
         # n_white_pix = self.count_white_pixel(the_result)
 
-        self.dead_or_alive(contour1, contour2)
+        # self.dead_or_alive(contour1, contour2)
+        self.dead_or_alive(contour1,the_result2[180:image.shape[0], 0:image.shape[1]])
         # self.check_white(n_white_pix, the_result)
         cv2.imwrite('result.png', the_result)
         cv2.imshow('result', the_result)
-        cv2.imshow('result2', the_result2)
+        # cv2.imshow('result2', the_result2)
         cv2.imshow('mask', mask)
         cv2.imshow('mask2', mask2)
         
         return the_result, the_result2
+    
+    def find_leg(self, rectangul, mask):
+        for i in rectangul:
+            # mask =mask[i[1]:i[1]+i[3], i[0]:i[0]+i[2]]
+            print(f'{i[0]}:{i[0]+i[2]},{i[1]}:{i[1]+i[3]},')
+            mask2 =mask[i[0]:i[0]+i[2], i[1]:i[1]+i[3]]
+            
+            # cv2.imshow('leg2', mask)
 
-    def dead_or_alive(self, contour1, contour2):
+    def dead_or_alive(self, contour1,mask):
+    # def dead_or_alive(self, contour1, contour2):
         def myFunc(e):
             return e[0]
         first_coordinate = []
         second_coordinate = []
-
         for c in contour1:
             (x1, y1, w1, h1) = c
             first_coordinate.append((x1, y1, w1, h1))
+            print(f'{x1}:{x1+w1}, {y1}:{y1+h1}')
+            leg =mask[y1:y1+h1, x1:x1+w1]
+            cv2.imshow('used mask', mask)
+            cv2.imshow('leg1', leg)
 
-        for c in contour2:
-            (x2, y2, w2, h2) = c
-            second_coordinate.append((x2, y2, w2, h2))
+        # for c in contour2:
+        #     (x2, y2, w2, h2) = c
+        #     second_coordinate.append((x2, y2, w2, h2))
 
         first_coordinate.sort(key = myFunc)
-        second_coordinate.sort(key = myFunc)
+        # second_coordinate.sort(key = myFunc)
         print(first_coordinate)
-        print(second_coordinate)
+        # print(second_coordinate)
+        return first_coordinate
+
 
     def find_target(self, the_result):
         self.stop_moving()
@@ -315,7 +331,7 @@ class MyRobot:
     def stop_moving(self):
         self.ep_chassis.drive_wheels(w1 = 0, w2 = 0 ,w3 = 0, w4 = 0)
 
-    def draw_rectangular(self, mask, paper, color):
+    def draw_rectangular(self, mask, paper, color, ):
         image = mask
         if paper != '':
             paper = paper
@@ -334,6 +350,7 @@ class MyRobot:
         for c in contours:
             area = cv2.contourArea(c)
             (x, y, w, h) = cv2.boundingRect(c)
+            (x, y, w, h) = (x-20, y-20, w+40, h+40)
             if area > 100:
                 rectangles.append((x, y, w, h))
             # Small contours are ignored.
