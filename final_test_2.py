@@ -1,11 +1,10 @@
-from multiprocessing.connection import wait
 from re import L
 from turtle import distance
 from robomaster import robot
 import time
 import cv2
 import numpy as np
-import random
+
 class MyRobot:
     def __init__(self):
         self.speed = 15
@@ -122,6 +121,44 @@ class MyRobot:
         the_result = cv2.blur(mask, (5,5))
         return the_result
 
+    def image_procession(self, image):
+        cv2.imshow('original', image)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        # lower1 = np.array([0, 100, 20])
+        # upper1 = np.array([5, 255, 255])
+
+        # # upper boundary RED color range values; Hue (160 - 180)
+        # lower2 = np.array([160,100,20])
+        # upper2 = np.array([179,255,255])
+
+        # lower1 = np.array([0, 100, 200])
+        # upper1 = np.array([20, 255, 255])
+
+        lower1 = np.array([30, 100, 100])
+        upper1 = np.array([40, 255, 255])
+
+        lower2 = np.array([0,100,200])
+        upper2 = np.array([20,255,255])
+        
+        lower_mask = cv2.inRange(image, lower1, upper1)
+        upper_mask = cv2.inRange(image, lower2, upper2)
+
+        mask = lower_mask + upper_mask
+
+        # cv2.rectangle(mask, (490,210), (790,510), (255, 255, 255)) 
+        # the_result = mask
+        the_result = self.blur_pic(mask)
+        
+        the_result = self.draw_rectangular(the_result)
+        # n_white_pix = self.count_white_pixel(the_result)
+
+        # self.check_white(n_white_pix, the_result)
+        cv2.imwrite('result.png', the_result)
+        cv2.imshow('result', the_result)
+        
+        return the_result
+
     def find_target(self, the_result):
         self.stop_moving()
         while True:
@@ -169,192 +206,38 @@ class MyRobot:
         # if middle is the most white pixel
         else: self.move_to_target()
 
-    
-    
+    # def spin(self, direction):
+    #     if direction.lower() == 'right': 
+    #         while True:
+    #             img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+    #             the_result = self.detect_red(img)
 
+    #             left_side = np.sum(the_result[0:720, 0:425] == 255)
+    #             middle = np.sum(the_result[0:720, 425:850] == 255)
+    #             right_side = np.sum(the_result[0:720, 850:1280] == 255)
 
-    def image_procession(self, image):
-        # Convertr Image to HSV
-        image2 = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    #             if middle < left_side and middle < right_side:
+    #                 self.stop_moving()
+    #                 break
 
-        # Mask Yellow Range
-        lower1 = np.array([30, 100, 100])
-        upper1 = np.array([40, 255, 255])
+    #             self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
+    #             time.sleep(self.delay)
 
-        # Mask Orange Range
-        lower2 = np.array([0,100,178])
-        upper2 = np.array([20,255,255])
-        
-        # Mask Yellow, Orange
-        lower_mask = cv2.inRange(image2, lower1, upper1)
-        upper_mask = cv2.inRange(image2, lower2, upper2)
+    #     if direction.lower() == 'left':
+    #         while True:
+    #             img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+    #             the_result = self.detect_red(img)
 
-        # Mask Together
-        mask = lower_mask + upper_mask
+    #             left_side = np.sum(the_result[0:720, 0:425] == 255)
+    #             middle = np.sum(the_result[0:720, 425:850] == 255)
+    #             right_side = np.sum(the_result[0:720, 850:1280] == 255)
 
-        # Blur Mask
-        the_result = self.blur_pic(mask)
-        
-        # Image เอาไปวาดสี่เหลี่ยม
-        image = image[200:image.shape[0], 0:image.shape[1]]
-        image_two = image.copy()
-        # วาดสี่เหลี่ยม
-        # Return รูป, ลิสต์ของ contours
-        the_result, contour1, _ = self.draw_rectangular(the_result, image, (0, 255, 0), 800)
+    #             if middle < left_side and middle < right_side:
+    #                 self.stop_moving()
+    #                 break
 
-        # ถ้ามีสี่เหลี่ยมที่วาดได้ ให้ไปเช็คว่าในสี่เหลี่ยมนั้นเป็นยังไง
-        # cv2.imshow('dasdas', the_result)
-        # cv2.imshow('imageqq', image_two)
-        # cv2.imshow('maskk', mask)
-
-        # if contour1 != []:
-        
-        self.dead_or_alive(contour1)
-        
-        return the_result
-    
-
-
-    def detect_orange(self, image):
-        # เอารูปที่เข้ามา แปลงเป็น HSV
-        
-        # กำหนด range สีส้ม
-        lower2 = np.array([0,100,178])
-        upper2 = np.array([20,255,255])
-        upper_mask = cv2.inRange(image, lower2, upper2)
-        upper_mask = self.blur_pic(upper_mask)
-        
-        # return รูปที่ผ่านการ mask แล้ว
-        return upper_mask
-
-    def dead_or_alive(self, contour1):
-
-        # เอาไว้กำหนดชื่อ frame opencv
-        i = 1
-        # วนลูปแต่ละรูปในสี่เหลี่ยม contour
-        for im in contour1:
-            try:
-                # เอารูปในลิสต์ไปผ่านการ detect สีส้ม
-                im = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
-                im = self.detect_orange(im)
-
-                upper = self.count_white_pixel(im[: im.shape[0]*2 // 3 , :])
-                bottom = self.count_white_pixel(im[im.shape[0]*2 // 3: im.shape[0], :])
-                
-                cv2.imshow('upper', im[: im.shape[0]*2 // 3 , :])
-                cv2.imshow('bottom', im[im.shape[0]*2 // 3: im.shape[0], :])
-                print(f'upper : {upper}')
-                print(f'botton : {bottom}')
-                
-                if bottom > upper:
-                    if im.shape[0] > im.shape[1]:
-                        print('Alive Bitch !')
-                        cv2.imshow('final_result_alive', im)
-                    else:
-                        print('Dead Bitch !')
-                        cv2.imshow('final_result_dead', im)
-                else:
-                    print('Dead')
-
-                
-            except Exception as E:
-                # กัน Error
-                print(f'line 89 : {E}')
-            i += 1
-
-    def draw_rectangular(self, mask, paper, color, threshold_area):
-        # เอาภาพที่ผ่านการ mask แล้ว
-        image = mask
-
-        # อยากวาดสี่เหลี่ยมลงในไหน ถ้าไม่มีจะวาดลงในภาพปกติ
-        if paper != '':
-            paper = paper
-        else:
-            paper = image[180:image.shape[0], 0:image.shape[1]]
-
-        # Threshold เอาเฉพาะ pixel ที่เป็นสีขาว 254 - 255
-        _ , thresh_gray = cv2.threshold(image, 254, 255, cv2.THRESH_BINARY)
-
-        # ลดข้างบนกันเจอกำแพง
-        thresh_gray = thresh_gray[180:image.shape[0], 0:image.shape[1]]
-
-        # ลด Noise
-        thresh_gray = cv2.morphologyEx(thresh_gray, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (190, 190)))
-
-        # Find contours in thresh_gray after closing the gaps
-        contours, _ = cv2.findContours(thresh_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-        # เตรียมเก็บอันที่ contour ผ่าน
-        rectangles = []
-
-        # เก็บจุดบนซ้ายของ contour
-        point = []
-
-        # Loop แต่ละ contour
-        for c in contours:
-
-            # หาพื้นที่ contour แต่ละอัน
-            area = cv2.contourArea(c)
-
-            # ทำ contour เป็น (x, y, w ,h)
-            (x, y, w, h) = cv2.boundingRect(c)
-
-            # ทำให้ x, y, w, h กว้างขึ้น
-            (x, y, w, h) = (x-10, y-30, w+30, h+10)
-
-            # ถ้า contour > 800 จะให้เก็บไว้ในลิสต์
-            if area < threshold_area:
-                paper[y:y+h , x:x+w] *= 0
-
-            if area > threshold_area:
-                try:
-                    # วาดรูปลงใน paper เอาไว้ดูได้ ว่าวาดสี่เหลี่ยมในตรงไหนไปบ้าง
-                    cv2.rectangle(paper, (x, y), (x + w, y + h), color, 3)
-
-                    # เก็บจุดบนซ้าย
-                    point.append((x+w, y+h))
-                    # เอาที่ contour เก็บไว้ในลิสต์
-                    rectangles.append(paper[y:y+h , x:x+w])
-
-                except Exception as E:
-                    # แสดง Error
-                    print(f'line 145 : {E}')
-        
-        # Return รูปที่ผ่านการวาดสี่เหลี่ยมแล้ว กับ ลิสต์ที่เป็นรูปในสี่เหลี่ยม contour แต่ละอัน
-        return paper, rectangles, point
-
-    def spin(self, direction):
-        if direction.lower() == 'right': 
-            while True:
-                img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
-                the_result = self.detect_red(img)
-
-                left_side = np.sum(the_result[0:720, 0:425] == 255)
-                middle = np.sum(the_result[0:720, 425:850] == 255)
-                right_side = np.sum(the_result[0:720, 850:1280] == 255)
-
-                if middle < left_side and middle < right_side:
-                    self.stop_moving()
-                    break
-
-                self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
-                time.sleep(self.delay)
-
-        if direction.lower() == 'left':
-            while True:
-                img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
-                the_result = self.detect_red(img)
-
-                left_side = np.sum(the_result[0:720, 0:425] == 255)
-                middle = np.sum(the_result[0:720, 425:850] == 255)
-                right_side = np.sum(the_result[0:720, 850:1280] == 255)
-
-                if middle < left_side and middle < right_side:
-                    self.stop_moving()
-                    break
-
-                self.ep_chassis.drive_wheels(w1=-self.speed, w2=self.speed, w3=self.speed, w4=-self.speed)
-                time.sleep(self.delay)
+    #             self.ep_chassis.drive_wheels(w1=-self.speed, w2=self.speed, w3=self.speed, w4=-self.speed)
+    #             time.sleep(self.delay)
 
     def pickup(self):
         self.move_gripper(2, -90)
@@ -404,37 +287,33 @@ class MyRobot:
     def stop_moving(self):
         self.ep_chassis.drive_wheels(w1 = 0, w2 = 0 ,w3 = 0, w4 = 0)
 
-    def draw_rectangular(self, mask, paper, color, ):
+    def draw_rectangular(self, mask):
         image = mask
-        if paper != '':
-            paper = paper
-        else:
-            paper = image[180:image.shape[0], 0:image.shape[1]]
-
+        paper = image[180:image.shape[0], 0:image.shape[1]]
         _ , thresh_gray = cv2.threshold(image, 254, 255, cv2.THRESH_BINARY)
         thresh_gray = thresh_gray[180:image.shape[0], 0:image.shape[1]]
 
-        # thresh_gray = cv2.morphologyEx(thresh_gray, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51,51)))
+        thresh_gray = cv2.morphologyEx(thresh_gray, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51,51)))
 
         # Find contours in thresh_gray after closing the gaps
         contours, _ = cv2.findContours(thresh_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        rectangles = []
         for c in contours:
             area = cv2.contourArea(c)
             (x, y, w, h) = cv2.boundingRect(c)
-            (x, y, w, h) = (x-20, y-20, w+40, h+40)
-            if area > 100:
-                rectangles.append((x, y, w, h))
             # Small contours are ignored.
-            if (w*h < 100):
+            if (area < 500) or (w < h) :
                 cv2.fillPoly(thresh_gray, pts=[c], color=0)
                 continue
-            if area > 100:
-                cv2.rectangle(paper, (x, y), (x + w, y + h), color, 3) 
 
-        return paper, rectangles
+            rect = cv2.minAreaRect(c)
+            box = cv2.boxPoints(rect)
+            # convert all coordinates floating point values to int
+            box = np.int0(box)
+            cv2.drawContours(paper, [box], 0, (255, 255, 255), 2)
 
+        return paper
+        
 if __name__ == '__main__':
     robott = MyRobot()
     robott.reset_gripper() # Reset Gripper 
