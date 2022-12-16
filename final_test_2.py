@@ -1,11 +1,10 @@
-from multiprocessing.connection import wait
 from re import L
 from turtle import distance
 from robomaster import robot
 import time
 import cv2
 import numpy as np
-import random
+
 class MyRobot:
     def __init__(self):
         self.speed = 15
@@ -15,7 +14,7 @@ class MyRobot:
         self.distance = 1000
 
         self.ep_robot = robot.Robot()
-        self.ep_robot.initialize(conn_type="rndis")
+        self.ep_robot.initialize(conn_type="ap")
         self.ep_ir = self.ep_robot.sensor
         self.ep_servo = self.ep_robot.servo
         self.ep_camera = self.ep_robot.camera
@@ -124,7 +123,7 @@ class MyRobot:
 
     def image_procession(self, image):
         cv2.imshow('original', image)
-        image2 = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         # lower1 = np.array([0, 100, 20])
         # upper1 = np.array([5, 255, 255])
@@ -139,69 +138,26 @@ class MyRobot:
         lower1 = np.array([30, 100, 100])
         upper1 = np.array([40, 255, 255])
 
-        lower2 = np.array([0,100,178])
+        lower2 = np.array([0,100,200])
         upper2 = np.array([20,255,255])
         
-        lower_mask = cv2.inRange(image2, lower1, upper1)
-        upper_mask = cv2.inRange(image2, lower2, upper2)
+        lower_mask = cv2.inRange(image, lower1, upper1)
+        upper_mask = cv2.inRange(image, lower2, upper2)
 
-        mask = lower_mask
-        mask2 = upper_mask
+        mask = lower_mask + upper_mask
+
         # cv2.rectangle(mask, (490,210), (790,510), (255, 255, 255)) 
         # the_result = mask
         the_result = self.blur_pic(mask)
-        # the_result2 = self.blur_pic(mask2)
-        the_result2 = self.blur_pic(mask2)
         
-        image = image[200:image.shape[0], 0:image.shape[1]]
-        mask = mask[180:image.shape[0], 0:image.shape[1]]
-        the_result, contour1 = self.draw_rectangular(the_result, image, (0, 255, 0))
-        # the_result2, contour2 = self.draw_rectangular(the_result2, the_result, (255, 255, 255))
+        the_result = self.draw_rectangular(the_result)
         # n_white_pix = self.count_white_pixel(the_result)
 
-        # self.dead_or_alive(contour1, contour2)
-        self.dead_or_alive(contour1,the_result2[180:image.shape[0], 0:image.shape[1]])
         # self.check_white(n_white_pix, the_result)
         cv2.imwrite('result.png', the_result)
         cv2.imshow('result', the_result)
-        # cv2.imshow('result2', the_result2)
-        cv2.imshow('mask', mask)
-        cv2.imshow('mask2', mask2)
         
-        return the_result, the_result2
-    
-    def find_leg(self, rectangul, mask):
-        for i in rectangul:
-            # mask =mask[i[1]:i[1]+i[3], i[0]:i[0]+i[2]]
-            print(f'{i[0]}:{i[0]+i[2]},{i[1]}:{i[1]+i[3]},')
-            mask2 =mask[i[0]:i[0]+i[2], i[1]:i[1]+i[3]]
-            
-            # cv2.imshow('leg2', mask)
-
-    def dead_or_alive(self, contour1,mask):
-    # def dead_or_alive(self, contour1, contour2):
-        def myFunc(e):
-            return e[0]
-        first_coordinate = []
-        second_coordinate = []
-        for c in contour1:
-            (x1, y1, w1, h1) = c
-            first_coordinate.append((x1, y1, w1, h1))
-            print(f'{x1}:{x1+w1}, {y1}:{y1+h1}')
-            leg =mask[y1:y1+h1, x1:x1+w1]
-            cv2.imshow('used mask', mask)
-            cv2.imshow('leg1', leg)
-
-        # for c in contour2:
-        #     (x2, y2, w2, h2) = c
-        #     second_coordinate.append((x2, y2, w2, h2))
-
-        first_coordinate.sort(key = myFunc)
-        # second_coordinate.sort(key = myFunc)
-        print(first_coordinate)
-        # print(second_coordinate)
-        return first_coordinate
-
+        return the_result
 
     def find_target(self, the_result):
         self.stop_moving()
@@ -250,38 +206,38 @@ class MyRobot:
         # if middle is the most white pixel
         else: self.move_to_target()
 
-    def spin(self, direction):
-        if direction.lower() == 'right': 
-            while True:
-                img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
-                the_result = self.detect_red(img)
+    # def spin(self, direction):
+    #     if direction.lower() == 'right': 
+    #         while True:
+    #             img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+    #             the_result = self.detect_red(img)
 
-                left_side = np.sum(the_result[0:720, 0:425] == 255)
-                middle = np.sum(the_result[0:720, 425:850] == 255)
-                right_side = np.sum(the_result[0:720, 850:1280] == 255)
+    #             left_side = np.sum(the_result[0:720, 0:425] == 255)
+    #             middle = np.sum(the_result[0:720, 425:850] == 255)
+    #             right_side = np.sum(the_result[0:720, 850:1280] == 255)
 
-                if middle < left_side and middle < right_side:
-                    self.stop_moving()
-                    break
+    #             if middle < left_side and middle < right_side:
+    #                 self.stop_moving()
+    #                 break
 
-                self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
-                time.sleep(self.delay)
+    #             self.ep_chassis.drive_wheels(w1=self.speed, w2=-self.speed, w3=-self.speed, w4=self.speed)
+    #             time.sleep(self.delay)
 
-        if direction.lower() == 'left':
-            while True:
-                img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
-                the_result = self.detect_red(img)
+    #     if direction.lower() == 'left':
+    #         while True:
+    #             img = self.ep_camera.read_cv2_image(strategy="newest", timeout=0.5)
+    #             the_result = self.detect_red(img)
 
-                left_side = np.sum(the_result[0:720, 0:425] == 255)
-                middle = np.sum(the_result[0:720, 425:850] == 255)
-                right_side = np.sum(the_result[0:720, 850:1280] == 255)
+    #             left_side = np.sum(the_result[0:720, 0:425] == 255)
+    #             middle = np.sum(the_result[0:720, 425:850] == 255)
+    #             right_side = np.sum(the_result[0:720, 850:1280] == 255)
 
-                if middle < left_side and middle < right_side:
-                    self.stop_moving()
-                    break
+    #             if middle < left_side and middle < right_side:
+    #                 self.stop_moving()
+    #                 break
 
-                self.ep_chassis.drive_wheels(w1=-self.speed, w2=self.speed, w3=self.speed, w4=-self.speed)
-                time.sleep(self.delay)
+    #             self.ep_chassis.drive_wheels(w1=-self.speed, w2=self.speed, w3=self.speed, w4=-self.speed)
+    #             time.sleep(self.delay)
 
     def pickup(self):
         self.move_gripper(2, -90)
@@ -331,37 +287,33 @@ class MyRobot:
     def stop_moving(self):
         self.ep_chassis.drive_wheels(w1 = 0, w2 = 0 ,w3 = 0, w4 = 0)
 
-    def draw_rectangular(self, mask, paper, color, ):
+    def draw_rectangular(self, mask):
         image = mask
-        if paper != '':
-            paper = paper
-        else:
-            paper = image[180:image.shape[0], 0:image.shape[1]]
-
+        paper = image[180:image.shape[0], 0:image.shape[1]]
         _ , thresh_gray = cv2.threshold(image, 254, 255, cv2.THRESH_BINARY)
         thresh_gray = thresh_gray[180:image.shape[0], 0:image.shape[1]]
 
-        # thresh_gray = cv2.morphologyEx(thresh_gray, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51,51)))
+        thresh_gray = cv2.morphologyEx(thresh_gray, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51,51)))
 
         # Find contours in thresh_gray after closing the gaps
         contours, _ = cv2.findContours(thresh_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        rectangles = []
         for c in contours:
             area = cv2.contourArea(c)
             (x, y, w, h) = cv2.boundingRect(c)
-            (x, y, w, h) = (x-20, y-20, w+40, h+40)
-            if area > 100:
-                rectangles.append((x, y, w, h))
             # Small contours are ignored.
-            if (w*h < 100):
+            if (area < 500) or (w < h) :
                 cv2.fillPoly(thresh_gray, pts=[c], color=0)
                 continue
-            if area > 100:
-                cv2.rectangle(paper, (x, y), (x + w, y + h), color, 3) 
 
-        return paper, rectangles
+            rect = cv2.minAreaRect(c)
+            box = cv2.boxPoints(rect)
+            # convert all coordinates floating point values to int
+            box = np.int0(box)
+            cv2.drawContours(paper, [box], 0, (255, 255, 255), 2)
 
+        return paper
+        
 if __name__ == '__main__':
     robott = MyRobot()
     robott.reset_gripper() # Reset Gripper 
